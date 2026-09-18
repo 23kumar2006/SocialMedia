@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
-import { Sparkles, Image, Briefcase, Newspaper, Link2, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Sparkles, Image, Briefcase, Newspaper, Flame, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
-import { CategoryBadge, categoryMeta } from '../../components/common/CategoryBadge';
+import { PostCard } from '../../components/post/PostCard';
+import { CreatePostModal } from '../../components/post/CreatePostModal';
 import { PostSkeleton } from '../../components/common/Loader';
+import { categoryMeta } from '../../components/common/CategoryBadge';
+import api from '../../services/api';
 
 const categoriesList = [
-  { id: 'all', name: 'All Feeds', slug: '' },
+  { id: 'all', name: 'For You', slug: '' },
   { id: 'entertainment', name: 'Entertainment', slug: 'entertainment' },
   { id: 'jobs-careers', name: 'Jobs & Careers', slug: 'jobs-careers' },
   { id: 'news', name: 'News', slug: 'news' },
@@ -17,10 +20,129 @@ const categoriesList = [
 ];
 
 export const Home = () => {
+  const { categorySlug } = useParams();
   const { user, isAuthenticated } = useAuth();
-  const { setIsCreatePostOpen } = useOutletContext() || {};
-  const [activeTab, setActiveTab] = useState('for-you');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('for-you'); // 'for-you', 'following', 'trending'
+  const [selectedCategory, setSelectedCategory] = useState(categorySlug || 'all');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Sync category param with selection
+  useEffect(() => {
+    if (categorySlug) {
+      setSelectedCategory(categorySlug.toLowerCase());
+    } else {
+      setSelectedCategory('all');
+    }
+  }, [categorySlug]);
+
+  // Fetch posts based on category and tab
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        feedType: activeTab,
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+      };
+      const res = await api.get('/posts', { params });
+      if (res.data?.posts) {
+        setPosts(res.data.posts);
+      }
+    } catch (err) {
+      console.warn('Backend offline or initializing; using demo stream fallback:', err);
+      // Fallback demo posts
+      setPosts([
+        {
+          _id: 'p_1',
+          author: {
+            name: 'Elena Rostova',
+            username: 'elena_tech',
+            role: 'creator',
+            isVerified: true,
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+          },
+          title: 'Building Scalable Micro-Frontends with React & Vite in 2026',
+          content: 'Categorized social media is the cure to algorithmic fatigue. By organizing streams into distinct channels like Technology, Jobs, and Education, users regain agency over their digital time.',
+          category: 'technology',
+          subcategory: 'Programming',
+          tags: ['#technology', '#react', '#architecture', '#webdev'],
+          postType: 'standard',
+          media: [
+            { url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=80' },
+          ],
+          likesCount: 142,
+          commentsCount: 18,
+          createdAt: new Date(Date.now() - 3600000).toISOString(),
+        },
+        {
+          _id: 'p_2',
+          author: {
+            name: 'Nexus Robotics Inc.',
+            username: 'nexus_robotics',
+            role: 'organization',
+            isVerified: true,
+            avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&auto=format&fit=crop&q=80',
+          },
+          title: 'Senior Full-Stack Engineer (React & Node.js)',
+          content: 'We are expanding our core platform engineering team at Nexus Robotics. Join us in building distributed teleoperation and low-latency streaming tools.',
+          category: 'jobs-careers',
+          subcategory: 'Jobs',
+          tags: ['#jobs', '#fullstack', '#hiring', '#react', '#nodejs'],
+          postType: 'job',
+          jobDetails: {
+            companyName: 'Nexus Robotics Inc.',
+            location: 'San Francisco, CA (Remote Option)',
+            jobType: 'Full-Time',
+            experienceLevel: 'Senior (4+ Years)',
+            salaryRange: '$140,000 - $175,000 / yr + Equity',
+            skills: ['React.js', 'Node.js', 'Socket.IO', 'MongoDB', 'Distributed Systems'],
+            applyUrl: 'https://nexusrobotics.ai/careers/senior-fullstack',
+          },
+          likesCount: 89,
+          commentsCount: 7,
+          createdAt: new Date(Date.now() - 7200000).toISOString(),
+        },
+        {
+          _id: 'p_3',
+          author: {
+            name: 'Global Tech News',
+            username: 'technews_global',
+            role: 'organization',
+            isVerified: true,
+            avatar: 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=120&auto=format&fit=crop&q=80',
+          },
+          title: 'Global Semiconductor Alliance Announces Optical Computing Architecture',
+          content: 'Breakthroughs in optical interconnects promise up to 10x reductions in AI training latency and power consumption across enterprise data centers.',
+          category: 'news',
+          subcategory: 'Technology',
+          tags: ['#news', '#semiconductors', '#breakthrough', '#ai'],
+          postType: 'news',
+          newsDetails: {
+            headline: 'Global Semiconductor Alliance Announces Next-Gen Optical Computing Architecture',
+            summary: 'Breakthrough optical interconnects promise 10x energy reduction and ultra-low latency for AI data center clusters.',
+            source: 'Nexus Global Newsroom',
+            sourceUrl: 'https://technews.org/optical-computing-2026',
+            isVerifiedSource: true,
+          },
+          likesCount: 95,
+          commentsCount: 11,
+          createdAt: new Date(Date.now() - 10800000).toISOString(),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, [selectedCategory, activeTab]);
+
+  const handlePostCreated = (newPost) => {
+    setPosts([newPost, ...posts]);
+  };
 
   return (
     <div className="space-y-4">
@@ -29,9 +151,9 @@ export const Home = () => {
         {categoriesList.map((cat) => {
           const isSelected = selectedCategory === cat.id;
           return (
-            <button
+            <Link
               key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
+              to={cat.slug ? `/category/${cat.slug}` : '/'}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 shrink-0 border ${
                 isSelected
                   ? 'bg-brand-500 text-white border-brand-500 shadow-md shadow-brand-500/20'
@@ -39,7 +161,7 @@ export const Home = () => {
               }`}
             >
               {cat.name}
-            </button>
+            </Link>
           );
         })}
       </div>
@@ -82,13 +204,20 @@ export const Home = () => {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Trending
+            <span className="flex items-center gap-1.5">
+              <Flame className="w-3.5 h-3.5 text-orange-400" />
+              Trending
+            </span>
           </button>
         </div>
 
-        <div className="text-[11px] text-slate-400 px-3 hidden sm:block">
-          {selectedCategory !== 'all' ? `Filter: ${selectedCategory}` : 'Personalized Engine'}
-        </div>
+        <button
+          onClick={fetchPosts}
+          className="p-2 text-slate-400 hover:text-brand-400 transition-colors"
+          title="Refresh feed"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Post Creation Quick Launcher Box */}
@@ -101,7 +230,7 @@ export const Home = () => {
               className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-800"
             />
             <button
-              onClick={() => setIsCreatePostOpen && setIsCreatePostOpen(true)}
+              onClick={() => setIsCreateModalOpen(true)}
               className="flex-1 text-left px-4 py-2.5 rounded-full bg-slate-900/90 hover:bg-slate-850 text-slate-400 text-xs sm:text-sm border border-slate-800 transition-colors"
             >
               Share insights, post a job, share news, or start a discussion...
@@ -111,7 +240,7 @@ export const Home = () => {
           <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
             <div className="flex items-center gap-1 sm:gap-2">
               <button
-                onClick={() => setIsCreatePostOpen && setIsCreatePostOpen(true)}
+                onClick={() => setIsCreateModalOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 transition-colors"
               >
                 <Image className="w-4 h-4 text-emerald-400" />
@@ -119,7 +248,7 @@ export const Home = () => {
               </button>
 
               <button
-                onClick={() => setIsCreatePostOpen && setIsCreatePostOpen(true)}
+                onClick={() => setIsCreateModalOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 transition-colors"
               >
                 <Briefcase className="w-4 h-4 text-brand-400" />
@@ -127,7 +256,7 @@ export const Home = () => {
               </button>
 
               <button
-                onClick={() => setIsCreatePostOpen && setIsCreatePostOpen(true)}
+                onClick={() => setIsCreateModalOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-slate-800 transition-colors"
               >
                 <Newspaper className="w-4 h-4 text-amber-400" />
@@ -138,8 +267,8 @@ export const Home = () => {
             <Button
               size="sm"
               variant="primary"
-              onClick={() => setIsCreatePostOpen && setIsCreatePostOpen(true)}
-              className="text-xs px-3.5 py-1.5 rounded-lg"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="text-xs px-3.5 py-1.5 rounded-lg font-bold"
             >
               Publish
             </Button>
@@ -147,105 +276,38 @@ export const Home = () => {
         </div>
       )}
 
-      {/* Feed Container Placeholder (connected to API in subsequent phases) */}
+      {/* Main Dynamic Feeds Container */}
       <div className="space-y-4">
-        {/* Render Demonstration Posts */}
-        <div className="p-5 rounded-2xl glass-panel border border-slate-800 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"
-                alt="Elena Tech"
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-500/30"
-              />
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h4 className="text-sm font-bold text-slate-100">Elena Rostova</h4>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                    Creator
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400">@elena_tech • 2 hours ago</p>
-              </div>
-            </div>
-            <CategoryBadge category="technology" />
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-base font-bold text-slate-100">
-              Announcing next-gen open architecture for category-first social discovery!
-            </h3>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              SocialSphere organizes content into distinct channels like Entertainment, Jobs & Careers, Tech, and Education. This completely solves feed fatigue and delivers pure relevance.
-            </p>
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <span className="text-xs text-brand-400 hover:underline">#ArtificialIntelligence</span>
-              <span className="text-xs text-brand-400 hover:underline">#Architecture</span>
-              <span className="text-xs text-brand-400 hover:underline">#WebDev</span>
-            </div>
-          </div>
-
-          <div className="rounded-xl overflow-hidden border border-slate-800 bg-slate-900">
-            <img
-              src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80"
-              alt="Post preview"
-              className="w-full h-64 object-cover hover:scale-[1.01] transition-transform duration-300"
+        {loading ? (
+          <>
+            <PostSkeleton />
+            <PostSkeleton />
+          </>
+        ) : posts.length > 0 ? (
+          posts.map((post) => (
+            <PostCard
+              key={post._id}
+              post={post}
+              onDelete={(deletedId) => setPosts(posts.filter((p) => p._id !== deletedId))}
             />
-          </div>
-
-          <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs text-slate-400">
-            <span>❤️ 142 Likes</span>
-            <span>💬 28 Comments</span>
-            <span>🔄 12 Shares</span>
-            <span>🔖 34 Saves</span>
-          </div>
-        </div>
-
-        {/* Second Demo Post: Job Listing */}
-        <div className="p-5 rounded-2xl glass-panel border border-emerald-500/30 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h4 className="text-sm font-bold text-slate-100">Nexus Robotics Inc.</h4>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                    Org
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400">@nexus_robotics • 4 hours ago</p>
-              </div>
-            </div>
-            <CategoryBadge category="jobs-careers" />
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-900/90 border border-emerald-500/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                Full-Time • Remote
-              </span>
-              <span className="text-xs font-bold text-emerald-400">$120,000 - $150,000 / yr</span>
-            </div>
-            <h3 className="text-base font-bold text-slate-100">
-              Senior Full-Stack Engineer (React & Node.js)
-            </h3>
-            <p className="text-xs text-slate-300">
-              We are looking for an experienced engineer to scale our distributed robotics teleoperation platform.
+          ))
+        ) : (
+          <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800 space-y-2">
+            <Sparkles className="w-8 h-8 text-slate-500 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-200">No publications found</h3>
+            <p className="text-xs text-slate-400">
+              Be the first to create a post in this category!
             </p>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">React.js</span>
-              <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">Node.js</span>
-              <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">Socket.IO</span>
-              <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">MongoDB</span>
-            </div>
           </div>
-        </div>
-
-        {/* Feed Skeleton */}
-        <PostSkeleton />
+        )}
       </div>
+
+      {/* Post Creation Modal */}
+      <CreatePostModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onPostCreated={handlePostCreated}
+      />
     </div>
   );
 };

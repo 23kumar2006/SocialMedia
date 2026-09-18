@@ -51,8 +51,15 @@ app.get('/api/health', (req, res) => {
   }, 'SocialSphere backend service is online');
 });
 
-// Dynamic Route Loader will mount module routes in subsequent phases:
-// e.g. app.use('/api/auth', authRoutes);
+// Mount Module Routes
+app.use('/api/auth', require('./modules/auth/authRoutes'));
+app.use('/api/categories', require('./modules/category/categoryRoutes'));
+app.use('/api/posts', require('./modules/post/postRoutes'));
+app.use('/api/users', require('./modules/user/userRoutes'));
+app.use('/api/notifications', require('./modules/notification/notificationRoutes'));
+app.use('/api/messages', require('./modules/messaging/messagingRoutes'));
+app.use('/api/reports', require('./modules/moderation/reportRoutes'));
+app.use('/api/admin', require('./modules/admin/adminRoutes'));
 
 // Fallback 404 handler for undefined API routes
 app.use('/api/*', (req, res) => {
