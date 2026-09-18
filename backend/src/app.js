@@ -15,14 +15,20 @@ app.use(helmet({
 }));
 
 // CORS Configuration
-const allowedOrigins = [config.clientUrl, 'http://localhost:5173', 'http://127.0.0.1:5173'];
+const allowedOrigins = [
+  config.clientUrl,
+  'https://social-media-pi-eight.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl) or if origin is allowed
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow non-browser requests or allowed origin list or any vercel.app preview domain
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive in dev
+    return callback(null, true); // Permissive in dev/staging
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
